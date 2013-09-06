@@ -1,3 +1,4 @@
+- Clean up logging.
 - Implement traitors.
 - Command line args for parameters.
 - Replace Vector where it makes sense.

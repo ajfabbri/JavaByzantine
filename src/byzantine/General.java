@@ -29,15 +29,19 @@ class Message {
      * Return true iff elements of path match beginning of p
      */
     public boolean prefixMatch(Vector<Integer> p) {
+        String s = path + ".prefixMatch(" + p +")";
+        
         for (int i : path) {
-            if (i != p.elementAt(i)) {
+            if (i != p.elementAt(path.indexOf(i))) {
+                Byzantine.debugPrint("\t" + s + "-> false");
                 return false;
             }
         }
+        Byzantine.debugPrint("\t" + s + "-> true");
         return true;
     }
     @Override public String toString() {
-        return "Message: " + value + ", " + path;
+        return "M:" + value + "," + path;
     }
 }
 
@@ -48,6 +52,7 @@ class Message {
 class MessageTree {
 
     MessageNode root;
+    int owner_id;   // TODO remove
 
     /**
      * Interview question: Static nested classes can't access stuff inside their
@@ -59,30 +64,39 @@ class MessageTree {
         Message message;
         boolean decision;
         Vector<MessageNode> children;
-        // Default constructor.
+        
+        public MessageNode() {
+            children = new Vector<MessageNode>();
+        }
     }
 
+    public MessageTree(int id) {
+            owner_id = id;
+    }
+    
     // TODO final decision code.. Simple Depth First Search with
     // decision accumultion on the walk back up to root.
     
     /**
-     * Given a list of received messages, where should it live in the tree?
+     * Given a received message, where should it live in the tree?
      */
-    private MessageNode findParent(Vector<Message> messages, int round) {
-        assert messages.firstElement().path.size() == round + 1;
+    private MessageNode findParent(Message m, int round) {
+        assert m.path.size() == round + 1;
         int i = 1;
         MessageNode node = root;
-        Vector path = messages.firstElement().path;
 
         /* Descend tree via prefix matches until we hit our rank. */
         while (i < round) {
             for (MessageNode n : node.children) {
-                if (n.message.prefixMatch(path)) {
+                if (n.message.prefixMatch(m.path)) {
                     node = n;
                     break;
                 }
             }
+            i++;
         }
+        Byzantine.debugPrint("[" + owner_id + "] findParent(" + m +
+                ", " + round + ") -> n" + node);
         return node;
     }
 
@@ -95,17 +109,21 @@ class MessageTree {
             root = new MessageNode();
             root.parent = null;
             root.message = messages.firstElement();
+            Byzantine.debugPrint("\t[" + owner_id + 
+                    "] insert(..round 0..) -> root " + root);
         } else {
-            MessageNode parent = findParent(messages, round);
-            assert parent.children == null;
+          
             for (Message m  : messages) {
+                MessageNode parent = findParent(m, round);
                 // Could optimize this out
                 MessageNode node = new MessageNode();
                 node.message = m;
                 parent.children.add(node);
+                Byzantine.debugPrint("\t[" + owner_id
+                    + "]insert(" + m + "," + round
+                    + " ) -> parent " + parent.message);
             }
         }
-
     }
 }
 
@@ -118,6 +136,8 @@ class General extends Thread {
 
     Mission mission;
     int id;
+    MessageTree m_tree;
+    
     /**
      * @TODO make a command line arg.
      */
@@ -142,6 +162,7 @@ class General extends Thread {
 
     public void assignId(int id) {
         this.id = id;
+         m_tree = new MessageTree(id);
     }
 
     /**
@@ -187,6 +208,7 @@ class General extends Thread {
 
             // Receiving phase
             messages = mission.receiveRound(id, round);
+            m_tree.insert(messages, round);
 
             // Deciding phase
             decision_this_round = majority(messages);
