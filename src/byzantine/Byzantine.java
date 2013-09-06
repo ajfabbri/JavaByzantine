@@ -13,8 +13,15 @@ import java.util.ArrayList;
  */
 public class Byzantine {
 
-    private static final int NUM_GENERALS = 5;
-    private static final int NUM_TRAITORS = 1;
+    private static final int NUM_GENERALS = 7;
+    private static final int NUM_TRAITORS = 2;
+    private static final boolean debug = true;
+    
+    public static final void debugPrint(String str) {
+        if (debug) {
+            System.out.println(str);
+        }    
+    }
     
     /** Choose m integers, randomly, out of [0,n). */
     private static ArrayList nChooseM(int n, int m)

@@ -1,6 +1,5 @@
-
-- Command line args for paramters.
-- Complete message round.
-- Replace Vector
+- Implement traitors.
+- Command line args for parameters.
+- Replace Vector where it makes sense.
 - Final decision code (DFS on tree with majority decisions accumulated on the way back to root)
 

@@ -16,6 +16,15 @@ class Message {
         return path.lastElement();
     }
     
+    public Message(boolean value) {
+        path = new Vector<Integer>();
+    }
+    
+    public Message(Message m2) {
+        value = m2.value;
+        path = (Vector<Integer>)m2.path.clone();
+    }
+    
     /**
      * Return true iff elements of path match beginning of p
      */
@@ -26,6 +35,9 @@ class Message {
             }
         }
         return true;
+    }
+    @Override public String toString() {
+        return "Message: " + value + ", " + path;
     }
 }
 
@@ -102,7 +114,7 @@ class MessageTree {
  *
  * @author fabbri
  */
-public class General extends Thread {
+class General extends Thread {
 
     Mission mission;
     int id;
@@ -149,31 +161,32 @@ public class General extends Thread {
             
             // Sending phase
             if (amCommander() && round == 0) {
-                Message m = new Message();
-                m.value = commander_should_attack;
+                Message m = new Message(commander_should_attack);
+                m.path.add(id);
                 Vector<Message> v = new Vector<Message>();
                 v.add(m);
-                mission.broadcast(v);
+                mission.sendRound(v, id, round);
                 break;
             }
 
+          
+            // Send out copies of received messages, adding self to path,
+            // and including our decision.
+            Vector<Message> newMessages = new Vector();
             if (round != 0) {
-                // Send out copies of received messages, adding self to path,
-                // and including our decision.
-                Vector<Message> newMessages = new Vector();
                 for (Message m : messages) {
                     if (m.senderId() != id) {
-                        m.path.add(id);
-                        m.value = decision_this_round;
-                        newMessages.add(m);
+                        Message m_new = new Message(m); // a copy
+                        m_new.path.add(id);
+                        m_new.value = decision_this_round;
+                        newMessages.add(m_new);
                     }
                 }
-                mission.broadcast(newMessages);
             }
+            mission.sendRound(newMessages, id, round);
 
             // Receiving phase
-            messages = mission.receiveRound();
-
+            messages = mission.receiveRound(id, round);
 
             // Deciding phase
             decision_this_round = majority(messages);
